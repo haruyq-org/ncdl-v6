@@ -21,6 +21,8 @@ from utils.ytd import RESOLUTION_OPTIONS, YTD, YTDUpdater
 RESOLUTION_COMMAND = "/r"
 RESOLUTION_COMMAND_ALIASES = (RESOLUTION_COMMAND, "/resolution")
 RESOLUTION_DESCRIPTION = "解像度を番号で指定してMP4をダウンロード"
+MP4_COLOR = "#4fd8ff"
+MP3_COLOR = "#a6efff"
 
 class CommandSuggester(Suggester):
     async def get_suggestion(self, value: str) -> str | None:
@@ -67,15 +69,15 @@ class SettingsScreen(ModalScreen[None]):
         resolution_options.extend((f"{height}p", height) for height in RESOLUTION_OPTIONS.values())
 
         with Container(id="settings_dialog"):
-            yield Static("[#b94fff]CONFIG[/]", id="settings_title")
-            yield Label("保存先", classes="settings_label")
+            yield Static(f"[{MP4_COLOR}]CONFIG[/]", id="settings_title")
+            yield Label("ダウンロード先", classes="settings_label")
             with Horizontal(id="settings_output_row"):
                 yield Input(
                     value=Config.get_output_path_value(),
                     placeholder="downloads",
                     id="settings_output_path",
                 )
-                yield Button("フォルダを開く", id="settings_browse")
+                yield Button("...", id="settings_browse")
             yield Label("標準画質", classes="settings_label")
             yield Select(
                 resolution_options,
@@ -150,7 +152,7 @@ class NCDLApp(App):
     ]
 
     mode = reactive("MP4", init=False)
-    mode_color = reactive("#b94fff", init=False)
+    mode_color = reactive(MP4_COLOR, init=False)
     
     ytd_version = reactive("Unknown", init=False)
 
@@ -160,6 +162,7 @@ class NCDLApp(App):
         self.active_job: DownloadJob | None = None
         self.job_ids = count(1)
         self.queue_dots = 0
+        self.logo_frame = 0
     
     def state(self) -> str:
         mode = self.mode
@@ -226,6 +229,7 @@ class NCDLApp(App):
         self.update_mode_view()
         self.update_queue_view()
         self.update_command_help("")
+        self.set_interval(0.12, self.update_logo_animation)
         self.set_interval(0.4, self.update_queue_dots)
 
     def watch_mode(self, mode: str) -> None:
@@ -247,11 +251,21 @@ class NCDLApp(App):
             Static,
         ).styles.border_left = ("solid", self.mode_color)
 
+    def update_logo_animation(self) -> None:
+        if not self.is_mounted:
+            return
+
+        self.logo_frame += 1
+        self.query_one("#logo", Static).update(Align.center(render_ncdl_logo(self.logo_frame)))
+
     def action_toggle_mode(self) -> None:
         self.mode = "MP3" if self.mode == "MP4" else "MP4"
-        self.mode_color = "#4fd8ff" if self.mode == "MP3" else "#b94fff"
+        self.mode_color = MP3_COLOR if self.mode == "MP3" else MP4_COLOR
 
     def action_open_settings(self):
+        if isinstance(self.screen, SettingsScreen):
+            return self.screen.dismiss(None)
+
         return self.push_screen(SettingsScreen())
 
     def update_settings_view(self) -> None:
@@ -357,7 +371,7 @@ class NCDLApp(App):
 
                 uri, resolution_height = parsed_command
                 mode = "MP4"
-                mode_color = "#b94fff"
+                mode_color = MP4_COLOR
 
             parsed_url = urlparse(uri)
             if not parsed_url.scheme or not parsed_url.netloc:

@@ -3,9 +3,10 @@ from pathlib import Path
 from rich.text import Text
 
 LOGO_PRIMARY = "#4fd8ff"
-LOGO_SECONDARY = "#8fc9d9"
+LOGO_SECONDARY = "#a6efff"
+LOGO_HIGHLIGHT = "#e2fbff"
 LOGO_SHADOW = "#16313a"
-LOGO_VERSION = "#3bbfe8"
+LOGO_VERSION = "#6de8ff"
 
 LOGO_LINES = [
     "█▄  █ █▀▀▀ █▀▀▄ █      █  █  ▄▀▀ ",
@@ -22,17 +23,24 @@ def get_app_version() -> str:
     except (OSError, KeyError, tomllib.TOMLDecodeError):
         return "0.0.0"
 
-def draw_logo_char(logo: Text, char: str, color: str, *, bold: bool = True) -> None:
+def draw_logo_char(
+    logo: Text,
+    char: str,
+    color: str,
+    *,
+    shadow: str = LOGO_SHADOW,
+    bold: bool = True,
+) -> None:
     weight = "bold " if bold else ""
     match char:
         case "_":
-            logo.append(" ", style=f"on {LOGO_SHADOW}")
+            logo.append(" ", style=f"on {shadow}")
         case "^":
-            logo.append("▀", style=f"{weight}{color} on {LOGO_SHADOW}")
+            logo.append("▀", style=f"{weight}{color} on {shadow}")
         case "~":
-            logo.append("▀", style=LOGO_SHADOW)
+            logo.append("▀", style=shadow)
         case ",":
-            logo.append("▄", style=LOGO_SHADOW)
+            logo.append("▄", style=shadow)
         case "█":
             logo.append("▀", style=f"{weight}{color} on {color}")
         case " ":
@@ -40,11 +48,18 @@ def draw_logo_char(logo: Text, char: str, color: str, *, bold: bool = True) -> N
         case _:
             logo.append(char, style=f"{weight}{color}")
 
-def draw_logo_part(logo: Text, line: str, color: str, *, bold: bool = True) -> None:
-    for char in line:
-        draw_logo_char(logo, char, color, bold=bold)
+def draw_logo_part(logo: Text, line: str, color: str, frame: int, *, bold: bool = True) -> None:
+    scan = (frame * 3) % (len(line) + 8) - 4
 
-def render_ncdl_logo() -> Text:
+    for x, char in enumerate(line):
+        if char != " " and abs(x - scan) <= 1:
+            draw_logo_char(logo, char, LOGO_HIGHLIGHT, shadow="#245766", bold=bold)
+        elif char != " " and (x + frame) % 19 == 0:
+            draw_logo_char(logo, char, LOGO_PRIMARY, shadow=LOGO_SHADOW, bold=False)
+        else:
+            draw_logo_char(logo, char, color, shadow=LOGO_SHADOW, bold=bold)
+
+def render_ncdl_logo(frame: int = 0) -> Text:
     logo = Text(no_wrap=True)
     version = get_app_version()
     logo_width = max(len(line) for line in LOGO_LINES)
@@ -56,7 +71,7 @@ def render_ncdl_logo() -> Text:
 
     for i, line in enumerate(LOGO_LINES):
         color = LOGO_PRIMARY if i == 0 else LOGO_SECONDARY
-        draw_logo_part(logo, line, color)
+        draw_logo_part(logo, line, color, frame + i)
 
         if i < len(LOGO_LINES) - 1:
             logo.append("\n")

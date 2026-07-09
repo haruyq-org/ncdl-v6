@@ -1,6 +1,6 @@
 Screen {
-    background: #050505;
-    color: #8a8a8a;
+    background: #041014;
+    color: #7da9b5;
 }
 
 #container {
@@ -35,7 +35,7 @@ Screen {
     width: 1fr;
     height: auto;
     padding: 0 1;
-    background: #1f1f1f;
+    background: #0d2228;
 }
 
 #command_help_items {
@@ -47,45 +47,48 @@ Screen {
 #prompt_border {
     width: 1;
     height: 100%;
-    border-left: solid #b94fff;
+    border-left: solid #4fd8ff;
 }
 
 #prompt_panel {
     width: 1fr;
     height: auto;
     align: center top;
-    background: #1f1f1f;
+    background: #0d2228;
     padding: 1 2;
 }
 
 #uri {
     width: 100%;
     height: 1;
-    background: #1f1f1f;
-    color: #d8d8d8;
+    background: #0d2228;
+    background-tint: transparent;
+    color: #d8fbff;
     border: none;
     padding: 0;
 }
 
 #uri:focus {
-    background: #1f1f1f;
+    background: #0d2228;
+    background-tint: transparent;
     border: none;
 }
 
 #uri > .input--placeholder {
-    color: #9b9b9b;
+    background: #0d2228;
+    color: #7da9b5;
 }
 
 #uri > .input--cursor {
-    background: #d8d8d8;
-    color: #1f1f1f;
+    background: #d8fbff;
+    color: #0d2228;
 }
 
 #state {
     width: 100%;
     height: 1;
     margin-top: 1;
-    color: #d8d8d8;
+    color: #d8fbff;
 }
 
 #output_path {
@@ -95,7 +98,7 @@ Screen {
     margin-left: 1;
     margin-right: 62;
     margin-bottom: 1;
-    color: #8a8a8a;
+    color: #7da9b5;
 }
 
 #shortcut_bar {
@@ -103,7 +106,7 @@ Screen {
     height: 1;
     text-align: center;
     margin-top: 1;
-    color: #8a8a8a;
+    color: #7da9b5;
 }
 
 #footer {
@@ -117,7 +120,7 @@ Screen {
     height: 100%;
     margin-right: 2;
     padding: 0 2 1 2;
-    background: #050505;
+    background: #041014;
     opacity: 0;
     content-align: left bottom;
 }
@@ -125,27 +128,27 @@ Screen {
 #queue_title {
     width: 100%;
     height: 1;
-    color: #8a8a8a;
+    color: #7da9b5;
     text-align: right;
 }
 
 #queue_items {
     width: 100%;
     height: 4;
-    color: #d8d8d8;
+    color: #d8fbff;
 }
 
 SettingsScreen {
     align: center middle;
-    background: #050505 80%;
+    background: #041014 80%;
 }
 
 #settings_dialog {
     width: 68;
     height: auto;
     padding: 1 2;
-    background: #1f1f1f;
-    border-left: solid #b94fff;
+    background: #0d2228;
+    border-left: solid #4fd8ff;
 }
 
 #settings_title {
@@ -158,7 +161,7 @@ SettingsScreen {
     width: 100%;
     height: 1;
     margin-top: 1;
-    color: #8a8a8a;
+    color: #7da9b5;
 }
 
 #settings_output_row {
@@ -169,45 +172,57 @@ SettingsScreen {
 #settings_output_path {
     width: 1fr;
     height: 1;
-    background: #1f1f1f;
-    color: #d8d8d8;
+    background: #0d2228;
+    background-tint: transparent;
+    color: #d8fbff;
     border: none;
     padding: 0;
 }
 
 #settings_output_path:focus {
-    background: #1f1f1f;
+    background: #0d2228;
+    background-tint: transparent;
     border: none;
 }
 
 #settings_output_path > .input--placeholder {
-    color: #9b9b9b;
+    background: #0d2228;
+    color: #7da9b5;
 }
 
 #settings_output_path > .input--cursor {
-    background: #d8d8d8;
-    color: #1f1f1f;
+    background: #d8fbff;
+    color: #0d2228;
 }
 
 #settings_browse {
-    width: 16;
+    width: 5;
+    min-width: 5;
     height: 1;
     margin-left: 1;
-    background: #050505;
+    background: #041014;
     color: #4fd8ff;
+    border: none;
+    text-style: bold;
+}
+
+#settings_browse:hover,
+#settings_browse:focus {
+    background: #4fd8ff;
+    color: #041014;
     border: none;
 }
 
-#settings_browse:focus {
-    background: #4fd8ff;
-    color: #050505;
+#settings_browse.-active {
+    background: #d8fbff;
+    color: #041014;
     border: none;
 }
 
 #settings_default_resolution {
     width: 100%;
     margin-top: 1;
-    background: #050505;
-    color: #d8d8d8;
+    background: #041014;
+    color: #d8fbff;
     border: none;
 }
