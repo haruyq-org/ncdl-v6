@@ -1,154 +1,57 @@
-import os
-from pathlib import Path
 from collections import deque
 from dataclasses import dataclass
 from itertools import count
+from pathlib import Path
 from urllib.parse import urlparse
+
+from rich.align import Align
+from rich.markup import escape
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, Container
-from textual.screen import ModalScreen
-from textual.widgets import Button, Input, Label, Select, Static
-from rich.align import Align
-from rich.markup import escape
+from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive
-from textual.suggester import Suggester
+from textual.widgets import Input, Static
 
-from ui.logo import render_ncdl_logo
-from utils.config import Config
+from ui.commands import (
+    RESOLUTION_COMMAND,
+    RESOLUTION_COMMAND_ALIASES,
+    RESOLUTION_DESCRIPTION,
+    RESOLUTION_OPTIONS,
+    CommandSuggester,
+    is_resolution_command,
+    is_resolution_number_match,
+    normalize_resolution,
+    parse_resolution_command,
+)
+from ui.logo import LOGO_PRIMARY, LOGO_SECONDARY, render_ncdl_logo
+from ui.settings import SettingsScreen
+from utils import config, ytd
 from utils.paths import get_resource_dir, is_frozen
-from utils.ytd import RESOLUTION_OPTIONS, YTD, YTDUpdater
+from utils.tools import get_ytd_version
 
 CSS_PATH = str(Path(__file__).resolve().parent / "css" / "ui.css")
 if is_frozen():
     CSS_PATH = str(get_resource_dir() / "ui" / "css" / "ui.css")
 
-RESOLUTION_COMMAND = "/r"
-RESOLUTION_COMMAND_ALIASES = (RESOLUTION_COMMAND, "/resolution")
-RESOLUTION_DESCRIPTION = "解像度を番号で指定してMP4をダウンロード"
-MP4_COLOR = "#4fd8ff"
-MP3_COLOR = "#a6efff"
-
-class CommandSuggester(Suggester):
-    async def get_suggestion(self, value: str) -> str | None:
-        if not value.startswith("/"):
-            return None
-
-        for alias in RESOLUTION_COMMAND_ALIASES:
-            if alias.startswith(value):
-                return f"{alias} "
-
-        command = value.split(maxsplit=1)[0]
-        if command in RESOLUTION_COMMAND_ALIASES and value.startswith(f"{command} "):
-            argument = value.removeprefix(f"{command} ")
-            if " " in argument:
-                return None
-
-            for number in RESOLUTION_OPTIONS:
-                suggestion = str(number)
-                if suggestion.startswith(argument):
-                    return f"{command} {suggestion} "
-
-        return None
+MODE_COLORS = {
+    "MP4": LOGO_PRIMARY,
+    "MP3": LOGO_SECONDARY,
+}
 
 @dataclass
 class DownloadJob:
     id: int
     uri: str
     mode: str
-    mode_color: str
     resolution_height: int | None = None
     title: str | None = None
 
-class SettingsScreen(ModalScreen[None]):
-    BINDINGS = [
-        Binding("escape", "cancel", "閉じる", priority=True),
-        Binding("up", "settings_focus_previous", "前へ", show=False, priority=True),
-        Binding("down", "settings_focus_next", "次へ", show=False, priority=True),
-    ]
+def format_mode(mode: str, resolution_height: int | None) -> str:
+    if resolution_height is None:
+        return mode
 
-    def compose(self) -> ComposeResult:
-        saved_resolution = Config.get_default_resolution()
-        default_resolution = saved_resolution if saved_resolution in RESOLUTION_OPTIONS.values() else 0
-        resolution_options = [("最高画質", 0)]
-        resolution_options.extend((f"{height}p", height) for height in RESOLUTION_OPTIONS.values())
-
-        with Container(id="settings_dialog"):
-            yield Static(f"[{MP4_COLOR}]CONFIG[/]", id="settings_title")
-            yield Label("ダウンロード先", classes="settings_label")
-            with Horizontal(id="settings_output_row"):
-                yield Input(
-                    value=Config.get_output_path_value(),
-                    placeholder="downloads",
-                    id="settings_output_path",
-                )
-                yield Button("...", id="settings_browse")
-            yield Label("標準画質", classes="settings_label")
-            yield Select(
-                resolution_options,
-                value=default_resolution,
-                allow_blank=False,
-                id="settings_default_resolution",
-            )
-
-    def on_mount(self) -> None:
-        self.query_one("#settings_output_path", Input).focus()
-
-    def action_cancel(self) -> None:
-        self.dismiss(None)
-
-    def action_settings_focus_previous(self) -> None:
-        self.focus_previous()
-
-    def action_settings_focus_next(self) -> None:
-        self.focus_next()
-
-    def apply_settings(self) -> None:
-        output_path = self.query_one("#settings_output_path", Input).value.strip() or "downloads"
-        select = self.query_one("#settings_default_resolution", Select)
-        default_resolution = select.value if isinstance(select.value, int) and select.value > 0 else None
-        Config.save_download(output_path, default_resolution)
-
-        if hasattr(self.app, "update_settings_view"):
-            self.app.update_settings_view()
-
-    @on(Input.Changed, "#settings_output_path")
-    def on_output_path_changed(self) -> None:
-        self.apply_settings()
-
-    @on(Select.Changed, "#settings_default_resolution")
-    def on_default_resolution_changed(self) -> None:
-        self.apply_settings()
-
-    @on(Button.Pressed, "#settings_browse")
-    def on_browse_pressed(self) -> None:
-        root = None
-        try:
-            from tkinter import Tk, filedialog
-
-            initial_dir = Config.get_output_path()
-            if not initial_dir.exists():
-                initial_dir = initial_dir.parent
-            if not initial_dir.exists():
-                initial_dir = os.getcwd()
-
-            root = Tk()
-            root.withdraw()
-            root.attributes("-topmost", True)
-            folder = filedialog.askdirectory(
-                initialdir=str(initial_dir),
-                title="出力先フォルダを選択",
-            )
-
-            if folder:
-                self.query_one("#settings_output_path", Input).value = folder
-                self.apply_settings()
-        except Exception as e:
-            self.notify(str(e), severity="error")
-        finally:
-            if root is not None:
-                root.destroy()
+    return f"{mode} {resolution_height}p"
 
 class NCDLApp(App):
     CSS_PATH = CSS_PATH
@@ -158,8 +61,6 @@ class NCDLApp(App):
     ]
 
     mode = reactive("MP4", init=False)
-    mode_color = reactive(MP4_COLOR, init=False)
-    
     ytd_version = reactive("Unknown", init=False)
 
     def __init__(self):
@@ -169,13 +70,14 @@ class NCDLApp(App):
         self.job_ids = count(1)
         self.queue_dots = 0
         self.logo_frame = 0
-    
-    def state(self) -> str:
-        mode = self.mode
-        default_resolution = self.get_default_resolution_height()
-        if mode == "MP4" and default_resolution is not None:
-            mode = f"{mode} {default_resolution}p"
 
+    @property
+    def mode_color(self) -> str:
+        return MODE_COLORS[self.mode]
+
+    def state(self) -> str:
+        default_resolution = self.get_default_resolution_height() if self.mode == "MP4" else None
+        mode = format_mode(self.mode, default_resolution)
         dl_state = f"[{self.mode_color}]{mode}[/]"
         platform = f"[dim] ・ yt-dlp {self.ytd_version}[/]"
         return f"{dl_state}{platform}"
@@ -187,27 +89,22 @@ class NCDLApp(App):
         return f"{label[:max_length - 3]}..."
 
     def get_default_resolution_height(self) -> int | None:
-        default_resolution = Config.get_default_resolution()
-        if default_resolution in RESOLUTION_OPTIONS.values():
-            return default_resolution
-
-        return None
+        return normalize_resolution(config.get_default_resolution())
 
     def compose(self) -> ComposeResult:
         with Container(id="container"):
             with Vertical(id="hero"):
-                
                 with Container(id="command_help"):
                     yield Static("", id="command_help_items")
 
                 yield Static(Align.center(render_ncdl_logo()), id="logo")
-            
+
                 with Horizontal(id="prompt_row"):
                     yield Static("", id="prompt_border", classes="mode_indicator")
 
                     with Container(id="prompt_panel"):
                         yield Input(
-                            placeholder='URLを入力...',
+                            placeholder="URLを入力...",
                             suggester=CommandSuggester(),
                             id="uri",
                         )
@@ -219,19 +116,19 @@ class NCDLApp(App):
                     "[dim]tab[/] モード切替  [dim]ctrl+p[/] 設定  [dim]/[/] コマンド",
                     id="shortcut_bar",
                 )
-            
+
         yield Static(
-            Config.get_output_path().as_posix(),
+            config.get_output_path().as_posix(),
             id="output_path",
         )
-        
+
         with Horizontal(id="footer"):
             with Container(id="download_queue"):
                 yield Static("QUEUE", id="queue_title")
                 yield Static("", id="queue_items")
 
     def on_mount(self) -> None:
-        self.ytd_version = YTDUpdater.get_ytd_version()
+        self.ytd_version = get_ytd_version()
         self.update_mode_view()
         self.update_queue_view()
         self.update_command_help("")
@@ -241,16 +138,13 @@ class NCDLApp(App):
     def watch_mode(self, mode: str) -> None:
         self.update_mode_view()
 
-    def watch_mode_color(self, mode_color: str) -> None:
-        self.update_mode_view()
-
     def watch_ytd_version(self, ytd_version: str) -> None:
         self.update_mode_view()
 
     def update_mode_view(self) -> None:
         if not self.is_mounted:
             return
-        
+
         self.query_one("#state", Static).update(self.state())
         self.query_one(
             "#prompt_border",
@@ -266,16 +160,16 @@ class NCDLApp(App):
 
     def action_toggle_mode(self) -> None:
         self.mode = "MP3" if self.mode == "MP4" else "MP4"
-        self.mode_color = MP3_COLOR if self.mode == "MP3" else MP4_COLOR
 
-    def action_open_settings(self):
+    def action_open_settings(self) -> None:
         if isinstance(self.screen, SettingsScreen):
-            return self.screen.dismiss(None)
+            self.screen.dismiss(None)
+            return
 
-        return self.push_screen(SettingsScreen())
+        self.push_screen(SettingsScreen())
 
     def update_settings_view(self) -> None:
-        self.query_one("#output_path", Static).update(Config.get_output_path().as_posix())
+        self.query_one("#output_path", Static).update(config.get_output_path().as_posix())
         self.update_mode_view()
 
     @on(Input.Changed, "#uri")
@@ -287,7 +181,7 @@ class NCDLApp(App):
         uri = event.value.strip()
         if uri == "":
             return
-        
+
         event.input.value = ""
         self.update_command_help("")
 
@@ -309,19 +203,20 @@ class NCDLApp(App):
         command_help.display = True
         lines = []
         command = value.split(maxsplit=1)[0].casefold()
+        resolution_command = is_resolution_command(command)
 
-        if self.is_resolution_command(command):
+        if resolution_command:
             lines.append(
-                f"[#050505 on #4fd8ff] {RESOLUTION_COMMAND.ljust(14)} [/]"
-                f"[#050505 on #4fd8ff] {RESOLUTION_DESCRIPTION} [/]"
+                f"[#050505 on {LOGO_PRIMARY}] {RESOLUTION_COMMAND.ljust(14)} [/]"
+                f"[#050505 on {LOGO_PRIMARY}] {RESOLUTION_DESCRIPTION} [/]"
             )
         else:
             lines.append("[#d8d8d8]該当するコマンドがありません[/]")
 
-        if self.is_resolution_command(command):
+        if resolution_command:
             options = []
             for number, height in RESOLUTION_OPTIONS.items():
-                style = "#050505 on #4fd8ff" if self.is_resolution_number_match(value, number) else "#8fc9d9"
+                style = f"#050505 on {LOGO_PRIMARY}" if is_resolution_number_match(value, number) else "#8fc9d9"
                 options.append(f"[{style}] {number}:{height}p [/]")
 
             lines.append(" ".join(options[:4]))
@@ -329,39 +224,9 @@ class NCDLApp(App):
 
         command_help_items.update("\n".join(lines))
 
-    def is_resolution_command(self, command: str) -> bool:
-        return any(alias.startswith(command) or command == alias for alias in RESOLUTION_COMMAND_ALIASES)
-
-    def is_resolution_number_match(self, value: str, number: int) -> bool:
-        parts = value.split(maxsplit=2)
-        if len(parts) < 2:
-            return number == next(iter(RESOLUTION_OPTIONS))
-
-        return str(number).startswith(parts[1])
-
-    def parse_resolution_command(self, command: str) -> tuple[str, int] | None:
-        parts = command.split(maxsplit=2)
-        if len(parts) != 3:
-            self.notify("使い方: /r 番号 URL", severity="error")
-            return None
-
-        try:
-            number = int(parts[1])
-            resolution_height = RESOLUTION_OPTIONS[number]
-        except (ValueError, KeyError):
-            options = ", ".join(f"{number}={height}p" for number, height in RESOLUTION_OPTIONS.items())
-            self.notify(f"解像度番号は {options} から指定してください。", severity="error")
-            return None
-
-        return parts[2].strip(), resolution_height
-
     def handle_input_submit(self, value: str) -> None:
-        output_path = Config.get_output_path()
-        output_path.mkdir(parents=True, exist_ok=True)
-        
         try:
             mode = self.mode
-            mode_color = self.mode_color
             resolution_height = self.get_default_resolution_height() if mode == "MP4" else None
             uri = value
 
@@ -371,13 +236,13 @@ class NCDLApp(App):
                     self.notify("不明なコマンドです。", severity="error")
                     return
 
-                parsed_command = self.parse_resolution_command(value)
-                if parsed_command is None:
+                try:
+                    uri, resolution_height = parse_resolution_command(value)
+                except ValueError as e:
+                    self.notify(str(e), severity="error")
                     return
 
-                uri, resolution_height = parsed_command
                 mode = "MP4"
-                mode_color = MP4_COLOR
 
             parsed_url = urlparse(uri)
             if not parsed_url.scheme or not parsed_url.netloc:
@@ -389,7 +254,6 @@ class NCDLApp(App):
                     id=next(self.job_ids),
                     uri=uri,
                     mode=mode,
-                    mode_color=mode_color,
                     resolution_height=resolution_height,
                 )
             )
@@ -416,12 +280,6 @@ class NCDLApp(App):
         self.queue_dots = (self.queue_dots + 1) % 3
         self.update_queue_view()
 
-    def job_mode_label(self, job: DownloadJob) -> str:
-        if job.resolution_height is None:
-            return job.mode
-
-        return f"{job.mode} {job.resolution_height}p"
-
     def update_queue_view(self) -> None:
         if not self.is_mounted:
             return
@@ -435,18 +293,20 @@ class NCDLApp(App):
         if self.active_job is not None:
             title = escape(self.queue_label(self.active_job.title or self.active_job.uri, 44))
             dots = "." * (self.queue_dots + 1)
-            mode = escape(self.job_mode_label(self.active_job))
-            lines.append(f"[{self.active_job.mode_color}]{mode}  [/] [#d8d8d8]{title}[/] [dim]{dots}[/]")
+            mode = escape(format_mode(self.active_job.mode, self.active_job.resolution_height))
+            color = MODE_COLORS[self.active_job.mode]
+            lines.append(f"[{color}]{mode}  [/] [#d8d8d8]{title}[/] [dim]{dots}[/]")
 
         for i, job in enumerate(jobs[:3], start=1):
             title = escape(self.queue_label(job.title or job.uri, 42))
-            mode = escape(self.job_mode_label(job))
-            lines.append(f"[dim]{i:02}[/] [{job.mode_color}]{mode}[/] [#8a8a8a]{title}[/]")
+            mode = escape(format_mode(job.mode, job.resolution_height))
+            color = MODE_COLORS[job.mode]
+            lines.append(f"[dim]{i:02}[/] [{color}]{mode}[/] [#8a8a8a]{title}[/]")
 
         if len(jobs) > 3:
             lines.append(f"[dim]+{len(jobs) - 3} more[/]")
 
-        queue_title.update(f"[dim]QUEUE[/] [#4fd8ff]{len(jobs)}[/]")
+        queue_title.update(f"[dim]QUEUE[/] [{LOGO_PRIMARY}]{len(jobs)}[/]")
         queue_items.update("\n".join(lines))
 
         target_opacity = 1.0 if self.active_job is not None or jobs else 0.0
@@ -474,22 +334,20 @@ class NCDLApp(App):
 
     @work(thread=True)
     def download_job(self, job: DownloadJob) -> None:
-        output_path = Config.get_output_path()
+        output_path = config.get_output_path()
         try:
-            title = YTD.get_title(job.uri) or job.uri
+            title = ytd.get_title(job.uri) or job.uri
             self.call_from_thread(self.update_job_title, job.id, title)
 
             if job.mode == "MP4":
-                result = YTD.download_mp4(
+                ytd.download_mp4(
                     job.uri,
                     output_path,
                     resolution_height=job.resolution_height,
                 )
             elif job.mode == "MP3":
-                result = YTD.download_mp3(job.uri, output_path)
-            else:
-                result = False
+                ytd.download_mp3(job.uri, output_path)
         except Exception:
-            result = False
+            pass
 
         self.call_from_thread(self.finish_job, job.id)

@@ -1,5 +1,3 @@
-import tomllib
-from pathlib import Path
 from rich.text import Text
 from __version__ import __version__
 
@@ -69,6 +67,3 @@ def render_ncdl_logo(frame: int = 0) -> Text:
             logo.append("\n")
 
     return logo
-
-def render_mimo_logo() -> Text:
-    return render_ncdl_logo()
