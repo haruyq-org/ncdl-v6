@@ -8,7 +8,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, Container
 from textual.screen import ModalScreen
-from textual.widgets import Button, Footer, Header, Input, Label, RichLog, Select, Static
+from textual.widgets import Button, Input, Label, Select, Static
 from rich.align import Align
 from rich.markup import escape
 from textual.reactive import reactive
@@ -53,14 +53,11 @@ class DownloadJob:
     resolution_height: int | None = None
     title: str | None = None
 
-@dataclass
-class SettingsData:
-    output_path: str
-    default_resolution: int | None
-
-class SettingsScreen(ModalScreen[SettingsData | None]):
+class SettingsScreen(ModalScreen[None]):
     BINDINGS = [
         Binding("escape", "cancel", "閉じる", priority=True),
+        Binding("up", "settings_focus_previous", "前へ", show=False, priority=True),
+        Binding("down", "settings_focus_next", "次へ", show=False, priority=True),
     ]
 
     def compose(self) -> ComposeResult:
@@ -72,11 +69,13 @@ class SettingsScreen(ModalScreen[SettingsData | None]):
         with Container(id="settings_dialog"):
             yield Static("[#b94fff]CONFIG[/]", id="settings_title")
             yield Label("保存先", classes="settings_label")
-            yield Input(
-                value=Config.get_output_path_value(),
-                placeholder="downloads",
-                id="settings_output_path",
-            )
+            with Horizontal(id="settings_output_row"):
+                yield Input(
+                    value=Config.get_output_path_value(),
+                    placeholder="downloads",
+                    id="settings_output_path",
+                )
+                yield Button("フォルダを開く", id="settings_browse")
             yield Label("標準画質", classes="settings_label")
             yield Select(
                 resolution_options,
@@ -84,23 +83,64 @@ class SettingsScreen(ModalScreen[SettingsData | None]):
                 allow_blank=False,
                 id="settings_default_resolution",
             )
-            with Horizontal(id="settings_actions"):
-                yield Button("キャンセル", id="settings_cancel")
-                yield Button("保存", id="settings_save")
+
+    def on_mount(self) -> None:
+        self.query_one("#settings_output_path", Input).focus()
 
     def action_cancel(self) -> None:
         self.dismiss(None)
 
-    @on(Button.Pressed, "#settings_cancel")
-    def on_cancel_pressed(self) -> None:
-        self.dismiss(None)
+    def action_settings_focus_previous(self) -> None:
+        self.focus_previous()
 
-    @on(Button.Pressed, "#settings_save")
-    def on_save_pressed(self) -> None:
+    def action_settings_focus_next(self) -> None:
+        self.focus_next()
+
+    def apply_settings(self) -> None:
         output_path = self.query_one("#settings_output_path", Input).value.strip() or "downloads"
         select = self.query_one("#settings_default_resolution", Select)
         default_resolution = select.value if isinstance(select.value, int) and select.value > 0 else None
-        self.dismiss(SettingsData(output_path, default_resolution))
+        Config.save_download(output_path, default_resolution)
+
+        if hasattr(self.app, "update_settings_view"):
+            self.app.update_settings_view()
+
+    @on(Input.Changed, "#settings_output_path")
+    def on_output_path_changed(self) -> None:
+        self.apply_settings()
+
+    @on(Select.Changed, "#settings_default_resolution")
+    def on_default_resolution_changed(self) -> None:
+        self.apply_settings()
+
+    @on(Button.Pressed, "#settings_browse")
+    def on_browse_pressed(self) -> None:
+        root = None
+        try:
+            from tkinter import Tk, filedialog
+
+            initial_dir = Config.get_output_path()
+            if not initial_dir.exists():
+                initial_dir = initial_dir.parent
+            if not initial_dir.exists():
+                initial_dir = os.getcwd()
+
+            root = Tk()
+            root.withdraw()
+            root.attributes("-topmost", True)
+            folder = filedialog.askdirectory(
+                initialdir=str(initial_dir),
+                title="出力先フォルダを選択",
+            )
+
+            if folder:
+                self.query_one("#settings_output_path", Input).value = folder
+                self.apply_settings()
+        except Exception as e:
+            self.notify(str(e), severity="error")
+        finally:
+            if root is not None:
+                root.destroy()
 
 class NCDLApp(App):
     CSS_PATH = os.path.dirname(__file__) + "\\css\\ui.css"
@@ -171,12 +211,12 @@ class NCDLApp(App):
                     id="shortcut_bar",
                 )
             
+        yield Static(
+            Config.get_output_path().as_posix(),
+            id="output_path",
+        )
         
         with Horizontal(id="footer"):
-            yield Static(
-                Config.get_output_path().as_posix(),
-                id="output_path",
-            )
             with Container(id="download_queue"):
                 yield Static("QUEUE", id="queue_title")
                 yield Static("", id="queue_items")
@@ -212,16 +252,11 @@ class NCDLApp(App):
         self.mode_color = "#4fd8ff" if self.mode == "MP3" else "#b94fff"
 
     def action_open_settings(self):
-        return self.push_screen(SettingsScreen(), self.save_settings)
+        return self.push_screen(SettingsScreen())
 
-    def save_settings(self, settings: SettingsData | None) -> None:
-        if settings is None:
-            return
-
-        Config.save_download(settings.output_path, settings.default_resolution)
+    def update_settings_view(self) -> None:
         self.query_one("#output_path", Static).update(Config.get_output_path().as_posix())
         self.update_mode_view()
-        self.notify("設定を保存しました。")
 
     @on(Input.Changed, "#uri")
     def on_uri_changed(self, event: Input.Changed) -> None:

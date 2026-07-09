@@ -88,6 +88,16 @@ Screen {
     color: #d8d8d8;
 }
 
+#output_path {
+    dock: bottom;
+    width: 1fr;
+    height: 1;
+    margin-left: 1;
+    margin-right: 62;
+    margin-bottom: 1;
+    color: #8a8a8a;
+}
+
 #shortcut_bar {
     width: 100%;
     height: 1;
@@ -99,16 +109,7 @@ Screen {
 #footer {
     width: 100%;
     height: 10%;
-    align: left bottom;
-}
-
-#output_path {
-    width: 1fr;
-    height: 100%;
-    margin: 1;
-    margin-bottom: 2;
-    color: #8a8a8a;
-    content-align: left bottom;
+    align: right bottom;
 }
 
 #download_queue {
@@ -132,4 +133,81 @@ Screen {
     width: 100%;
     height: 4;
     color: #d8d8d8;
+}
+
+SettingsScreen {
+    align: center middle;
+    background: #050505 80%;
+}
+
+#settings_dialog {
+    width: 68;
+    height: auto;
+    padding: 1 2;
+    background: #1f1f1f;
+    border-left: solid #b94fff;
+}
+
+#settings_title {
+    width: 100%;
+    height: 1;
+    margin-bottom: 1;
+}
+
+.settings_label {
+    width: 100%;
+    height: 1;
+    margin-top: 1;
+    color: #8a8a8a;
+}
+
+#settings_output_row {
+    width: 100%;
+    height: auto;
+}
+
+#settings_output_path {
+    width: 1fr;
+    height: 1;
+    background: #1f1f1f;
+    color: #d8d8d8;
+    border: none;
+    padding: 0;
+}
+
+#settings_output_path:focus {
+    background: #1f1f1f;
+    border: none;
+}
+
+#settings_output_path > .input--placeholder {
+    color: #9b9b9b;
+}
+
+#settings_output_path > .input--cursor {
+    background: #d8d8d8;
+    color: #1f1f1f;
+}
+
+#settings_browse {
+    width: 16;
+    height: 1;
+    margin-left: 1;
+    background: #050505;
+    color: #4fd8ff;
+    border: none;
+}
+
+#settings_browse:focus {
+    background: #4fd8ff;
+    color: #050505;
+    border: none;
+}
+
+#settings_default_resolution {
+    width: 100%;
+    margin-top: 1;
+    background: #050505;
+    color: #d8d8d8;
+    border: none;
 }
