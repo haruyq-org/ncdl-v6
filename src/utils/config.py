@@ -1,8 +1,11 @@
 import tomllib
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
-CONFIG_PATH = ROOT_DIR / "config.toml"
+from utils.paths import get_app_dir, get_config_dir
+
+ROOT_DIR = get_app_dir()
+CONFIG_DIR = get_config_dir()
+CONFIG_PATH = CONFIG_DIR / "config.toml"
 DEFAULT_CONFIG = """[download]
 output_path = "downloads"
 default_resolution = "best"
@@ -12,6 +15,7 @@ class Config:
     @staticmethod
     def ensure_config() -> Path:
         if not CONFIG_PATH.exists():
+            CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
             CONFIG_PATH.write_text(DEFAULT_CONFIG, encoding="utf-8")
 
         return CONFIG_PATH

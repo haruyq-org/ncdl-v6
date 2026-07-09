@@ -1,6 +1,7 @@
 import tomllib
 from pathlib import Path
 from rich.text import Text
+from __version__ import __version__
 
 LOGO_PRIMARY = "#4fd8ff"
 LOGO_SECONDARY = "#a6efff"
@@ -13,15 +14,6 @@ LOGO_LINES = [
     "█ ▀▄█ █    █  █ █      █  █  █▀▀▄",
     "▀   ▀ ▀▀▀▀ ▀▀▀  ▀▀▀▀    ▀▀    ▀▀ ",
 ]
-
-def get_app_version() -> str:
-    pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
-
-    try:
-        with pyproject.open("rb") as file:
-            return tomllib.load(file)["project"]["version"]
-    except (OSError, KeyError, tomllib.TOMLDecodeError):
-        return "0.0.0"
 
 def draw_logo_char(
     logo: Text,
@@ -61,7 +53,7 @@ def draw_logo_part(logo: Text, line: str, color: str, frame: int, *, bold: bool 
 
 def render_ncdl_logo(frame: int = 0) -> Text:
     logo = Text(no_wrap=True)
-    version = get_app_version()
+    version = __version__
     logo_width = max(len(line) for line in LOGO_LINES)
 
     logo.append(version.rjust(logo_width), style=f"bold {LOGO_VERSION}")

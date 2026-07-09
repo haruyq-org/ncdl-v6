@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from collections import deque
 from dataclasses import dataclass
 from itertools import count
@@ -16,7 +17,12 @@ from textual.suggester import Suggester
 
 from ui.logo import render_ncdl_logo
 from utils.config import Config
+from utils.paths import get_resource_dir, is_frozen
 from utils.ytd import RESOLUTION_OPTIONS, YTD, YTDUpdater
+
+CSS_PATH = str(Path(__file__).resolve().parent / "css" / "ui.css")
+if is_frozen():
+    CSS_PATH = str(get_resource_dir() / "ui" / "css" / "ui.css")
 
 RESOLUTION_COMMAND = "/r"
 RESOLUTION_COMMAND_ALIASES = (RESOLUTION_COMMAND, "/resolution")
@@ -145,7 +151,7 @@ class SettingsScreen(ModalScreen[None]):
                 root.destroy()
 
 class NCDLApp(App):
-    CSS_PATH = os.path.dirname(__file__) + "\\css\\ui.css"
+    CSS_PATH = CSS_PATH
     BINDINGS = [
         Binding("tab", "toggle_mode", "モード切替", priority=True),
         Binding("ctrl+p", "open_settings", "設定", priority=True),

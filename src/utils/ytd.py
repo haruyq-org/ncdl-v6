@@ -7,12 +7,15 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import httpx
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
+from utils.paths import get_app_dir, get_data_dir, get_project_dir, is_frozen
+
+ROOT_DIR = get_data_dir() if is_frozen() else get_project_dir()
+APP_DIR = get_app_dir()
 BIN_DIR = ROOT_DIR / "bin"
 YTD_PATH = BIN_DIR / ("yt-dlp.exe" if os.name == "nt" else "yt-dlp")
 FFMPEG_PATH = BIN_DIR / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
 FFPROBE_PATH = BIN_DIR / ("ffprobe.exe" if os.name == "nt" else "ffprobe")
-COOKIE_PATH = ROOT_DIR / "cookies.txt"
+COOKIE_PATH = APP_DIR / "cookies.txt"
 
 YTD_URL = {
     "nt": "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe",
