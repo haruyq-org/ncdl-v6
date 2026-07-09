@@ -1,0 +1,135 @@
+Screen {
+    background: #050505;
+    color: #8a8a8a;
+}
+
+#container {
+    width: 100%;
+    height: 90%;
+    align: center top;
+    padding-top: 6;
+}
+
+#logo {
+    width: 100%;
+    height: 5;
+    margin-bottom: 1;
+}
+
+#hero {
+    width: 78;
+    height: auto;
+    layers: base overlay;
+}
+
+#prompt_row {
+    width: 100%;
+    height: auto;
+}
+
+#command_help {
+    display: none;
+    layer: overlay;
+    position: absolute;
+    offset: 0 3;
+    width: 1fr;
+    height: auto;
+    padding: 0 1;
+    background: #1f1f1f;
+}
+
+#command_help_items {
+    width: 100%;
+    height: auto;
+    color: #8fc9d9;
+}
+
+#prompt_border {
+    width: 1;
+    height: 100%;
+    border-left: solid #b94fff;
+}
+
+#prompt_panel {
+    width: 1fr;
+    height: auto;
+    align: center top;
+    background: #1f1f1f;
+    padding: 1 2;
+}
+
+#uri {
+    width: 100%;
+    height: 1;
+    background: #1f1f1f;
+    color: #d8d8d8;
+    border: none;
+    padding: 0;
+}
+
+#uri:focus {
+    background: #1f1f1f;
+    border: none;
+}
+
+#uri > .input--placeholder {
+    color: #9b9b9b;
+}
+
+#uri > .input--cursor {
+    background: #d8d8d8;
+    color: #1f1f1f;
+}
+
+#state {
+    width: 100%;
+    height: 1;
+    margin-top: 1;
+    color: #d8d8d8;
+}
+
+#shortcut_bar {
+    width: 100%;
+    height: 1;
+    text-align: center;
+    margin-top: 1;
+    color: #8a8a8a;
+}
+
+#footer {
+    width: 100%;
+    height: 10%;
+    align: left bottom;
+}
+
+#output_path {
+    width: 1fr;
+    height: 100%;
+    margin: 1;
+    margin-bottom: 2;
+    color: #8a8a8a;
+    content-align: left bottom;
+}
+
+#download_queue {
+    width: 58;
+    height: 100%;
+    margin-right: 2;
+    padding: 0 2 1 2;
+    background: #050505;
+    opacity: 0;
+    content-align: left bottom;
+}
+
+#queue_title {
+    width: 100%;
+    height: 1;
+    color: #8a8a8a;
+    text-align: right;
+}
+
+#queue_items {
+    width: 100%;
+    height: 4;
+    color: #d8d8d8;
+}
