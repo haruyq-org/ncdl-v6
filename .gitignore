@@ -13,4 +13,4 @@ wheels/
 bin/
 downloads/
 *.txt
-*.toml
+config.toml

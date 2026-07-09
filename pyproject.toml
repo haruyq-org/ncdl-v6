@@ -1,0 +1,11 @@
+[project]
+name = "ncdl-v6"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.28.1",
+    "textual>=8.2.8",
+    "textual-dev>=1.8.0",
+]
