@@ -1,6 +1,7 @@
 Screen {
     background: #041014;
     color: #7da9b5;
+    overflow: hidden;
 }
 
 #container {
