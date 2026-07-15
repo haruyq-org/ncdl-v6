@@ -1,30 +1,29 @@
 # ncdl-v6
 
-Windows向けの、Textualで作られたyt-dlpのダウンロードUIです。
+<img src="./assets/Screenshot 2026-07-16 023225.png" width="700" height="400" />
+
+ncdl-v6は、Textualで構成されたyt-dlpのラッパーUIです。  
+このアプリでは、より直感的な方法で様々な動画・音声をダウンロードできます。
 
 ## 実行
 
-```powershell
+```bash
 uv run python src/main.py
-```
-
-初回起動時にyt-dlpとFFmpegを自動取得します。
-
-## テスト
-
-```powershell
-uv run python -m unittest discover -s tests
 ```
 
 ## ビルド
 
-```powershell
+> Windows
+
+```bash
 .\build.bat
 ```
 
-実行ファイルは`dist/ncdl.exe`に作成されます。
+> Linux
+```
+Soon
+```
 
-## 構成
+## ライセンス
 
-- `src/ui`: アプリ画面、設定画面、コマンド入力
-- `src/utils`: 設定、パス、外部ツール、ダウンロード処理
+このプロジェクトは[MIT License](./LICENSE)で公開されています。
