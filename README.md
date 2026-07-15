@@ -1,9 +1,9 @@
 # ncdl-v6
 
-<img src="./assets/Screenshot 2026-07-16 023225.png" width="700" height="400" />
-
 ncdl-v6は、Textualで構成されたyt-dlpのラッパーUIです。  
 このアプリでは、より直感的な方法で様々な動画・音声をダウンロードできます。
+
+<img src="./assets/Screenshot 2026-07-16 023225.png" width="700" height="400" />
 
 ## 実行
 
