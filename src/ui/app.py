@@ -24,7 +24,7 @@ from ui.commands import (
     normalize_resolution,
     parse_resolution_command,
 )
-from ui.logo import LOGO_PRIMARY, LOGO_SECONDARY, render_ncdl_logo
+from ui.logo import LOGO_PRIMARY, LOGO_SECONDARY, LOGO_VERSION, render_ncdl_logo
 from ui.settings import SettingsScreen
 from utils import config, ytd
 from utils.paths import get_resource_dir, is_frozen
@@ -37,6 +37,7 @@ if is_frozen():
 MODE_COLORS = {
     "MP4": LOGO_PRIMARY,
     "MP3": LOGO_SECONDARY,
+    "GIF": LOGO_VERSION,
 }
 
 @dataclass
@@ -159,7 +160,8 @@ class NCDLApp(App):
         self.query_one("#logo", Static).update(Align.center(render_ncdl_logo(self.logo_frame)))
 
     def action_toggle_mode(self) -> None:
-        self.mode = "MP3" if self.mode == "MP4" else "MP4"
+        modes = tuple(MODE_COLORS)
+        self.mode = modes[(modes.index(self.mode) + 1) % len(modes)]
 
     def action_open_settings(self) -> None:
         if isinstance(self.screen, SettingsScreen):
@@ -347,6 +349,8 @@ class NCDLApp(App):
                 )
             elif job.mode == "MP3":
                 ytd.download_mp3(job.uri, output_path)
+            elif job.mode == "GIF":
+                ytd.download_gif(job.uri, output_path)
         except Exception:
             pass
 

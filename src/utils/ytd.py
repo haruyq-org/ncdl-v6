@@ -218,3 +218,34 @@ def download_mp3(url: str, output_path: Path, cookie_path: Path | None = COOKIE_
         return True
     except (subprocess.CalledProcessError, FileNotFoundError, RuntimeError):
         return False
+
+
+def download_gif(url: str, output_path: Path, cookie_path: Path | None = COOKIE_PATH) -> bool:
+    try:
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        subprocess.run(
+            [
+                str(YTD_PATH),
+                "--ffmpeg-location",
+                str(FFMPEG_PATH.parent),
+                "--no-playlist",
+                "--windows-filenames",
+                "--force-overwrites",
+                *get_cookie_options(cookie_path),
+                *get_js_runtime_options(),
+                "-f",
+                "bv*/b",
+                "--recode-video",
+                "gif",
+                "-o",
+                get_output_template(output_path),
+                url,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError, RuntimeError):
+        return False
