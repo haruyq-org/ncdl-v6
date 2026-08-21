@@ -26,7 +26,7 @@ from ui.commands import (
 )
 from ui.logo import LOGO_PRIMARY, LOGO_SECONDARY, LOGO_VERSION, render_ncdl_logo
 from ui.settings import SettingsScreen
-from utils import config, ytd
+from utils import config, spotdl, ytd
 from utils.paths import get_resource_dir, is_frozen
 from utils.tools import get_ytd_version
 
@@ -251,6 +251,10 @@ class NCDLApp(App):
                 self.notify("無効なURLです。", severity="error")
                 return
 
+            if spotdl.is_spotify_url(uri):
+                mode = "MP3"
+                resolution_height = None
+
             self.download_queue.append(
                 DownloadJob(
                     id=next(self.job_ids),
@@ -338,6 +342,12 @@ class NCDLApp(App):
     def download_job(self, job: DownloadJob) -> None:
         output_path = config.get_output_path()
         try:
+            if spotdl.is_spotify_url(job.uri):
+                self.call_from_thread(self.update_job_title, job.id, job.uri)
+                spotdl.download(job.uri, output_path)
+                self.call_from_thread(self.finish_job, job.id)
+                return
+
             title = ytd.get_title(job.uri) or job.uri
             self.call_from_thread(self.update_job_title, job.id, title)
 

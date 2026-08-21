@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import sys
 import zipfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -14,12 +15,14 @@ BIN_DIR = ROOT_DIR / "bin"
 YTD_PATH = BIN_DIR / ("yt-dlp.exe" if os.name == "nt" else "yt-dlp")
 FFMPEG_PATH = BIN_DIR / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
 FFPROBE_PATH = BIN_DIR / ("ffprobe.exe" if os.name == "nt" else "ffprobe")
+SPOTDL_PATH = BIN_DIR / ("spotdl.exe" if os.name == "nt" else "spotdl")
 
 YTD_URL = {
     "nt": "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe",
     "posix": "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp",
 }
 FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+SPOTDL_RELEASE_URL = "https://api.github.com/repos/spotDL/spotify-downloader/releases/latest"
 
 
 def download_file(url: str, path: Path) -> Path:
@@ -76,11 +79,32 @@ def fetch_ffmpeg() -> str:
     return str(FFMPEG_PATH)
 
 
+def fetch_spotdl() -> str:
+    suffix = "-win32.exe" if os.name == "nt" else "-darwin" if sys.platform == "darwin" else "-linux"
+    response = httpx.get(SPOTDL_RELEASE_URL, follow_redirects=True, timeout=60.0)
+    response.raise_for_status()
+    asset = next(
+        (asset for asset in response.json()["assets"] if asset["name"].endswith(suffix)),
+        None,
+    )
+    if asset is None:
+        raise FileNotFoundError("spotDL executable was not found in the latest release")
+
+    download_file(asset["browser_download_url"], SPOTDL_PATH)
+
+    if os.name != "nt":
+        SPOTDL_PATH.chmod(SPOTDL_PATH.stat().st_mode | 0o755)
+
+    return str(SPOTDL_PATH)
+
+
 def ensure_tools() -> None:
     if not YTD_PATH.exists():
         fetch_ytd()
     if not FFMPEG_PATH.exists() or not FFPROBE_PATH.exists():
         fetch_ffmpeg()
+    if not SPOTDL_PATH.exists():
+        fetch_spotdl()
 
 
 def get_ytd_version() -> str:
