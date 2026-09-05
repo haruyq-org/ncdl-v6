@@ -3,7 +3,7 @@ setlocal
 
 cd /d "%~dp0"
 
-uv run pyinstaller ^
+uv run --locked pyinstaller ^
   --noconfirm ^
   --clean ^
   --onefile ^

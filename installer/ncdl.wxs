@@ -1,0 +1,30 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="ncdl" Manufacturer="haruyq" Version="$(var.Version)"
+           UpgradeCode="432c17ec-736c-44d7-b6f7-47beccbd7e82" Scope="perUser">
+    <MajorUpgrade Schedule="afterInstallInitialize"
+                  DowngradeErrorMessage="A newer version of ncdl is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="INSTALLFOLDER" Name="ncdl">
+        <Component Id="Application" Guid="2c1646b5-aef2-4003-95d1-ff057176005d">
+          <File Id="NcdlExe" Source="$(var.SourceDir)\ncdl.exe">
+            <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder"
+                      Name="ncdl" WorkingDirectory="INSTALLFOLDER" />
+          </File>
+          <File Id="LicenseFile" Source="LICENSE" Name="LICENSE.txt" />
+          <RegistryValue Root="HKCU" Key="Software\haruyq\ncdl" Name="InstallDir"
+                         Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+          <Environment Id="UserPath" Name="PATH" Action="set" Part="last"
+                       Value="[INSTALLFOLDER]" System="no" Permanent="no" />
+          <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Main">
+      <ComponentRef Id="Application" />
+    </Feature>
+  </Package>
+</Wix>
