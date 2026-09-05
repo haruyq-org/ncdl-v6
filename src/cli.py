@@ -41,6 +41,10 @@ def parse_url(value: str) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+
     parser = argparse.ArgumentParser(description="動画のダウンロードとファイルの変換")
     commands = parser.add_subparsers(dest="command", required=True)
 

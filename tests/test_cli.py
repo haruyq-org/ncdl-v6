@@ -15,6 +15,26 @@ from utils import config, convert, ytd
 
 class CliTests(unittest.TestCase):
     @patch("cli.ensure_tools")
+    def test_cli_output_uses_utf8_with_legacy_streams(self, ensure_tools) -> None:
+        cases = (
+            (["--help"], 0, "動画のダウンロードとファイルの変換"),
+            (["download", "--help"], 0, "動画のURL"),
+            (["convert", "--help"], 0, "変換するファイル"),
+            (["download", "invalid"], 2, "httpまたはhttpsの動画URLを指定してください。"),
+        )
+        for args, exit_code, message in cases:
+            with self.subTest(args=args), io.TextIOWrapper(io.BytesIO(), encoding="cp1252") as stdout, io.TextIOWrapper(io.BytesIO(), encoding="cp1252") as stderr:
+                with redirect_stdout(stdout), redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
+                    cli.main(args)
+
+                self.assertEqual(error.exception.code, exit_code)
+                output = stdout if exit_code == 0 else stderr
+                output.flush()
+                self.assertIn(message, output.buffer.getvalue().decode("utf-8"))
+
+        ensure_tools.assert_not_called()
+
+    @patch("cli.ensure_tools")
     @patch("cli.ytd.download", return_value=True)
     def test_download_defaults_and_overrides(self, download, ensure_tools) -> None:
         with TemporaryDirectory() as temp_dir:
