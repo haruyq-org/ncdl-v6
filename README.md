@@ -11,6 +11,15 @@ ncdl-v6は、Textualで構成されたyt-dlpとspotdlのラッパーUIです。
 uv run python src/main.py
 ```
 
+### CLI
+
+```bash
+uv run python src/main.py download "https://www.youtube.com/watch?v=VIDEO_ID"
+uv run python src/main.py download "https://www.youtube.com/watch?v=VIDEO_ID" -r 1080p -f mkv -o downloads
+uv run python src/main.py convert "input.mp3" -f wav
+uv run python src/main.py convert "input.mp4" -o "output.webm"
+```
+
 ## ビルド
 
 > Windows

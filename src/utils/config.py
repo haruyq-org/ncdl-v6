@@ -1,3 +1,4 @@
+import json
 import tomllib
 from pathlib import Path
 
@@ -9,6 +10,7 @@ CONFIG_PATH = CONFIG_DIR / "config.toml"
 DEFAULT_CONFIG = """[download]
 output_path = "downloads"
 default_resolution = "best"
+default_format = "mp4"
 """
 
 
@@ -28,12 +30,14 @@ def load() -> dict:
 
 
 def save_download(output_path: str, default_resolution: int | None) -> Path:
-    output_path = output_path.replace("\\", "\\\\").replace("\"", "\\\"")
+    output_path = json.dumps(output_path, ensure_ascii=False)
+    default_format = json.dumps(get_default_format(), ensure_ascii=False)
     default_resolution_value = f"{default_resolution}" if default_resolution is not None else "\"best\""
     CONFIG_PATH.write_text(
         "[download]\n"
-        f"output_path = \"{output_path}\"\n"
-        f"default_resolution = {default_resolution_value}\n",
+        f"output_path = {output_path}\n"
+        f"default_resolution = {default_resolution_value}\n"
+        f"default_format = {default_format}\n",
         encoding="utf-8",
     )
 
@@ -63,3 +67,7 @@ def get_default_resolution() -> int | None:
         return resolution
 
     return None
+
+
+def get_default_format() -> str:
+    return str(get_download_config().get("default_format", "mp4"))

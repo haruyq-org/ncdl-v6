@@ -81,7 +81,15 @@ class NCDLApp(App):
         mode = format_mode(self.mode, default_resolution)
         dl_state = f"[{self.mode_color}]{mode}[/]"
         platform = f"[dim] ・ yt-dlp {self.ytd_version}[/]"
-        return f"{dl_state}{platform}"
+        cookie_enabled = bool(ytd.get_cookie_options())
+        cookie_state = "Cookieあり" if cookie_enabled else "Cookieなし"
+        if self.active_job is not None:
+            if spotdl.is_spotify_url(self.active_job.uri):
+                cookie_state = "Cookie対象外"
+            elif cookie_enabled:
+                cookie_state = "Cookie使用中"
+
+        return f"{dl_state}{platform}[dim] ・ {cookie_state}[/]"
 
     def queue_label(self, label: str, max_length: int) -> str:
         if len(label) <= max_length:
@@ -276,6 +284,7 @@ class NCDLApp(App):
         self.active_job = self.download_queue.popleft()
         self.active_job.title = "タイトル取得中"
         self.queue_dots = 0
+        self.update_mode_view()
         self.update_queue_view()
         self.download_job(self.active_job)
 
@@ -330,38 +339,45 @@ class NCDLApp(App):
         self.active_job.title = title
         self.update_queue_view()
 
-    def finish_job(self, job_id: int) -> None:
+    def finish_job(self, job_id: int, success: bool, error: str | None = None) -> None:
         if self.active_job is None or self.active_job.id != job_id:
             return
 
+        if not success:
+            message = error or "URL・通信環境・保存先を確認して再試行してください。"
+            self.notify(
+                f"{self.active_job.uri}\n{message}",
+                title="ダウンロード失敗",
+                severity="error",
+                timeout=10,
+                markup=False,
+            )
+
         self.active_job = None
+        self.update_mode_view()
         self.update_queue_view()
         self.start_next_download()
 
     @work(thread=True)
     def download_job(self, job: DownloadJob) -> None:
-        output_path = config.get_output_path()
+        success = False
+        error = None
         try:
+            output_path = config.get_output_path()
             if spotdl.is_spotify_url(job.uri):
                 self.call_from_thread(self.update_job_title, job.id, job.uri)
-                spotdl.download(job.uri, output_path)
-                self.call_from_thread(self.finish_job, job.id)
-                return
+                success = spotdl.download(job.uri, output_path)
+            else:
+                title = ytd.get_title(job.uri) or job.uri
+                self.call_from_thread(self.update_job_title, job.id, title)
 
-            title = ytd.get_title(job.uri) or job.uri
-            self.call_from_thread(self.update_job_title, job.id, title)
-
-            if job.mode == "MP4":
-                ytd.download_mp4(
+                success = ytd.download(
                     job.uri,
                     output_path,
+                    output_format=job.mode.lower(),
                     resolution_height=job.resolution_height,
                 )
-            elif job.mode == "MP3":
-                ytd.download_mp3(job.uri, output_path)
-            elif job.mode == "GIF":
-                ytd.download_gif(job.uri, output_path)
-        except Exception:
-            pass
-
-        self.call_from_thread(self.finish_job, job.id)
+        except Exception as e:
+            error = str(e)
+        finally:
+            self.call_from_thread(self.finish_job, job.id, success, error)

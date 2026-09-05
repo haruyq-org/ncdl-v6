@@ -7,6 +7,8 @@ from utils.paths import get_app_dir
 from utils.tools import FFMPEG_PATH, YTD_PATH
 
 COOKIE_PATH = get_app_dir() / "cookies.txt"
+AUDIO_FORMATS = ("aac", "alac", "flac", "m4a", "mp3", "opus", "vorbis", "wav")
+DOWNLOAD_FORMATS = ("mp4", "mkv", "webm", "mov", "avi", "flv", "gif") + AUDIO_FORMATS
 
 
 def get_output_template(output_path: Path) -> str:
@@ -104,12 +106,16 @@ def get_format_selector(format_info: dict) -> str:
     return f"{format_id}+ba[ext=m4a]/{format_id}+ba/{format_id}"
 
 
-def download_mp4(
+def download(
     url: str,
     output_path: Path,
+    output_format: str = "mp4",
     cookie_path: Path | None = COOKIE_PATH,
     resolution_height: int | None = None,
 ) -> bool:
+    if output_format not in DOWNLOAD_FORMATS:
+        return False
+
     try:
         output_path.mkdir(parents=True, exist_ok=True)
 
@@ -128,16 +134,31 @@ def download_mp4(
             get_output_template(output_path),
             url,
         ]
-        if resolution_height is not None:
+        format_options = (
+            ["--merge-output-format", "mp4", "--remux-video", "mp4"]
+            if output_format == "mp4" else ["--recode-video", output_format]
+        )
+        if output_format in AUDIO_FORMATS:
             commands = [
                 [
                     *base_command,
                     "-f",
-                    get_format_selector(format_info),
-                    "--merge-output-format",
-                    "mp4",
-                    "--remux-video",
-                    "mp4",
+                    "ba/b",
+                    "-x",
+                    "--audio-format",
+                    output_format,
+                    "--audio-quality",
+                    "0",
+                    *output_command,
+                ]
+            ]
+        elif resolution_height is not None:
+            commands = [
+                [
+                    *base_command,
+                    "-f",
+                    str(format_info["format_id"]) if output_format == "gif" else get_format_selector(format_info),
+                    *format_options,
                     *output_command,
                 ]
                 for format_info in get_video_formats(url, resolution_height, cookie_path)
@@ -145,16 +166,13 @@ def download_mp4(
 
             if not commands:
                 return False
-        else:
+        elif output_format == "mp4":
             commands = [
                 [
                     *base_command,
                     "-f",
                     "bv*[ext=mp4][vcodec^=avc1]+ba[ext=m4a]/bv*[vcodec^=avc1]+ba/bv*+ba/b",
-                    "--merge-output-format",
-                    "mp4",
-                    "--remux-video",
-                    "mp4",
+                    *format_options,
                     *output_command,
                 ],
                 [
@@ -167,6 +185,16 @@ def download_mp4(
                     "mp4",
                     *output_command,
                 ],
+            ]
+        else:
+            commands = [
+                [
+                    *base_command,
+                    "-f",
+                    "bv*/b" if output_format == "gif" else "bv*+ba/b",
+                    *format_options,
+                    *output_command,
+                ]
             ]
 
         for command in commands:
@@ -186,66 +214,18 @@ def download_mp4(
         return False
 
 
-def download_mp3(url: str, output_path: Path, cookie_path: Path | None = COOKIE_PATH) -> bool:
-    try:
-        output_path.mkdir(parents=True, exist_ok=True)
+def download_mp4(
+    url: str,
+    output_path: Path,
+    cookie_path: Path | None = COOKIE_PATH,
+    resolution_height: int | None = None,
+) -> bool:
+    return download(url, output_path, "mp4", cookie_path, resolution_height)
 
-        subprocess.run(
-            [
-                str(YTD_PATH),
-                "--ffmpeg-location",
-                str(FFMPEG_PATH.parent),
-                "--no-playlist",
-                "--windows-filenames",
-                "--force-overwrites",
-                *get_cookie_options(cookie_path),
-                *get_js_runtime_options(),
-                "-f",
-                "ba/b",
-                "-x",
-                "--audio-format",
-                "mp3",
-                "--audio-quality",
-                "0",
-                "-o",
-                get_output_template(output_path),
-                url,
-            ],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return True
-    except (subprocess.CalledProcessError, FileNotFoundError, RuntimeError):
-        return False
+
+def download_mp3(url: str, output_path: Path, cookie_path: Path | None = COOKIE_PATH) -> bool:
+    return download(url, output_path, "mp3", cookie_path)
 
 
 def download_gif(url: str, output_path: Path, cookie_path: Path | None = COOKIE_PATH) -> bool:
-    try:
-        output_path.mkdir(parents=True, exist_ok=True)
-
-        subprocess.run(
-            [
-                str(YTD_PATH),
-                "--ffmpeg-location",
-                str(FFMPEG_PATH.parent),
-                "--no-playlist",
-                "--windows-filenames",
-                "--force-overwrites",
-                *get_cookie_options(cookie_path),
-                *get_js_runtime_options(),
-                "-f",
-                "bv*/b",
-                "--recode-video",
-                "gif",
-                "-o",
-                get_output_template(output_path),
-                url,
-            ],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return True
-    except (subprocess.CalledProcessError, FileNotFoundError, RuntimeError):
-        return False
+    return download(url, output_path, "gif", cookie_path)

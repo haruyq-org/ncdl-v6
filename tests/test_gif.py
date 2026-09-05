@@ -10,8 +10,9 @@ from ui.app import NCDLApp
 from utils import ytd
 
 class GifTests(unittest.IsolatedAsyncioTestCase):
+    @patch("ui.app.NCDLApp.update_logo_animation")
     @patch("ui.app.get_ytd_version", return_value="test")
-    async def test_mode_cycles_through_gif(self, _get_ytd_version) -> None:
+    async def test_mode_cycles_through_gif(self, _get_ytd_version, _update_logo_animation) -> None:
         app = NCDLApp()
 
         async with app.run_test() as pilot:

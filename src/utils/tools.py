@@ -98,12 +98,12 @@ def fetch_spotdl() -> str:
     return str(SPOTDL_PATH)
 
 
-def ensure_tools() -> None:
-    if not YTD_PATH.exists():
+def ensure_tools(*, ytd: bool = True, spotdl: bool = True) -> None:
+    if ytd and not YTD_PATH.exists():
         fetch_ytd()
     if not FFMPEG_PATH.exists() or not FFPROBE_PATH.exists():
         fetch_ffmpeg()
-    if not SPOTDL_PATH.exists():
+    if spotdl and not SPOTDL_PATH.exists():
         fetch_spotdl()
 
 
