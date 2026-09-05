@@ -1,6 +1,12 @@
 name: Windows release
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "リリースする既存タグ（例: v1.0.0）"
+        required: true
+        type: string
   push:
     tags:
       - "v*"
@@ -16,9 +22,11 @@ jobs:
         shell: pwsh
     env:
       PYTHONUTF8: "1"
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
           persist-credentials: false
       - uses: astral-sh/setup-uv@v9.0.0
         with:
@@ -37,7 +45,7 @@ jobs:
 
           version = runpy.run_path('src/__version__.py')['__version__']
           project = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))
-          assert os.environ['GITHUB_REF_NAME'] == 'v' + version, 'Tag must match src/__version__.py'
+          assert os.environ['RELEASE_TAG'] == 'v' + version, 'Tag must match src/__version__.py'
           assert project['project']['version'] == version, 'pyproject.toml version must match src/__version__.py'
           '@
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -58,4 +66,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $installer = Get-Item dist\ncdl-*-windows-x64.msi
-          gh release create $env:GITHUB_REF_NAME $installer.FullName dist\ncdl.exe --verify-tag --generate-notes --title "ncdl $env:GITHUB_REF_NAME"
+          gh release create $env:RELEASE_TAG $installer.FullName dist\ncdl.exe --verify-tag --generate-notes --title "ncdl $env:RELEASE_TAG"
