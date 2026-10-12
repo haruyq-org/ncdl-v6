@@ -29,9 +29,22 @@ def get_js_runtime_options() -> list[str]:
     return []
 
 
+def run_ytd(command: list[str]) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(command, capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        if "--cookies" not in command or "[twitter]" not in (e.stderr or "") or "Could not authenticate you" not in (e.stderr or ""):
+            raise
+
+        cookie_index = command.index("--cookies")
+        command = command.copy()
+        command[cookie_index:cookie_index + 2] = ["--no-cookies"]
+        return subprocess.run(command, capture_output=True, text=True, check=True)
+
+
 def get_title(url: str, cookie_path: Path | None = COOKIE_PATH) -> str | None:
     try:
-        result = subprocess.run(
+        result = run_ytd(
             [
                 str(YTD_PATH),
                 "--no-playlist",
@@ -42,9 +55,6 @@ def get_title(url: str, cookie_path: Path | None = COOKIE_PATH) -> str | None:
                 "%(title)s",
                 url,
             ],
-            capture_output=True,
-            text=True,
-            check=True,
         )
         return result.stdout.strip().splitlines()[0]
     except (subprocess.CalledProcessError, FileNotFoundError, RuntimeError, IndexError):
@@ -53,7 +63,7 @@ def get_title(url: str, cookie_path: Path | None = COOKIE_PATH) -> str | None:
 
 def get_video_formats(url: str, resolution_height: int, cookie_path: Path | None = COOKIE_PATH) -> list[dict]:
     try:
-        result = subprocess.run(
+        result = run_ytd(
             [
                 str(YTD_PATH),
                 "--no-playlist",
@@ -63,9 +73,6 @@ def get_video_formats(url: str, resolution_height: int, cookie_path: Path | None
                 "--dump-single-json",
                 url,
             ],
-            capture_output=True,
-            text=True,
-            check=True,
         )
         info = json.loads(result.stdout)
         formats = info.get("formats", [])
@@ -199,12 +206,7 @@ def download(
 
         for command in commands:
             try:
-                subprocess.run(
-                    command,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
+                run_ytd(command)
                 return True
             except subprocess.CalledProcessError:
                 pass
